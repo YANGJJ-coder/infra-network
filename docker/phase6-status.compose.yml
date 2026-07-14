@@ -1,0 +1,11 @@
+services:
+  uptime-kuma:
+    image: ${UPTIME_KUMA_IMAGE:?UPTIME_KUMA_IMAGE must be defined in .env}
+    container_name: bwg-uptime-kuma
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      UPTIME_KUMA_HOST: 127.0.0.1
+      UPTIME_KUMA_PORT: "3001"
+    volumes:
+      - /opt/docker/data/status/uptime-kuma:/app/data

@@ -1,0 +1,30 @@
+x-nextin:
+  version: 1
+  mode: subscription-template
+
+proxies: []
+
+proxy-groups:
+  - name: PROXY
+    type: select
+    include-all-proxies: true
+    proxies:
+      - AUTO
+      - DIRECT
+  - name: AUTO
+    type: url-test
+    include-all-proxies: true
+    url: https://www.gstatic.com/generate_204
+    interval: 300
+    tolerance: 80
+
+rules:
+  - DOMAIN-SUFFIX,chatgpt.com,PROXY
+  - DOMAIN-SUFFIX,openai.com,PROXY
+  - DOMAIN-SUFFIX,oaistatic.com,PROXY
+  - DOMAIN-SUFFIX,oaiusercontent.com,PROXY
+  - DOMAIN-SUFFIX,netflix.com,PROXY
+  - DOMAIN-SUFFIX,nflxvideo.net,PROXY
+  - DOMAIN-SUFFIX,nflximg.net,PROXY
+  - GEOIP,CN,DIRECT
+  - MATCH,PROXY

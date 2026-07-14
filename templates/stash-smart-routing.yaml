@@ -1,0 +1,92 @@
+# Stash Rule Mode profile/override. Add the existing VLESS node or subscription in Stash, then select it in PROXY.
+# DNS uses encrypted Remote DNS; no system DNS fallback is configured.
+mode: rule
+log-level: warning
+ipv6: true
+proxies: []
+
+dns:
+  default-nameserver: [223.5.5.5, 119.29.29.29]
+  nameserver: ["https://cloudflare-dns.com/dns-query", "https://dns.google/dns-query"]
+  nameserver-policy:
+    'geosite:cn,private,apple-cn,microsoft@cn': ["https://doh.pub/dns-query", "https://dns.alidns.com/dns-query"]
+    'geosite:category-ads-all': rcode://success
+  fake-ip-filter: ['+.stun.*.*', '+.stun.*.*.*', '+.pool.ntp.org', '*.msftconnecttest.com', '*.msftncsi.com']
+
+proxy-groups:
+  - {name: PROXY, type: select, proxies: [DIRECT]}
+
+rule-providers:
+  ads: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/ads.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ads-all.yaml"}
+  private: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/private.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/private.yaml"}
+  cn: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/cn.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cn.yaml"}
+  baidu: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/baidu.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/baidu.yaml"}
+  tencent: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/tencent.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/tencent.yaml"}
+  alibaba: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/alibaba.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/alibaba.yaml"}
+  jd: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/jd.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/jd.yaml"}
+  feishu: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/feishu.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/feishu.yaml"}
+  dingtalk: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/dingtalk.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/dingtalk.yaml"}
+  gitee: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/gitee.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/gitee.yaml"}
+  apple-cn: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/apple-cn.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple-cn.yaml"}
+  microsoft-cn: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/microsoft-cn.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/microsoft@cn.yaml"}
+  openai: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/openai.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/openai.yaml"}
+  claude: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/claude.yaml, url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Claude/Claude.yaml"}
+  anthropic: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/anthropic.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/anthropic.yaml"}
+  google: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/google.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google.yaml"}
+  github: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/github.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/github.yaml"}
+  docker: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/docker.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/docker.yaml"}
+  huggingface: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/huggingface.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/huggingface.yaml"}
+  youtube: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/youtube.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/youtube.yaml"}
+  netflix: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/netflix.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/netflix.yaml"}
+  disney: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/disney.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/disney.yaml"}
+  apple-tvplus: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/apple-tvplus.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple-tvplus.yaml"}
+  primevideo: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/primevideo.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/primevideo.yaml"}
+  reddit: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/reddit.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/reddit.yaml"}
+  twitter: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/twitter.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/twitter.yaml"}
+  telegram: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/telegram.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/telegram.yaml"}
+
+rules:
+  - RULE-SET,ads,REJECT
+  - RULE-SET,openai,PROXY
+  - RULE-SET,claude,PROXY
+  - RULE-SET,anthropic,PROXY
+  - RULE-SET,google,PROXY
+  - RULE-SET,github,PROXY
+  - RULE-SET,docker,PROXY
+  - RULE-SET,huggingface,PROXY
+  - DOMAIN-SUFFIX,ai.cloudflare.com,PROXY
+  - DOMAIN-SUFFIX,workers.ai,PROXY
+  - RULE-SET,youtube,PROXY
+  - RULE-SET,netflix,PROXY
+  - RULE-SET,disney,PROXY
+  - RULE-SET,apple-tvplus,PROXY
+  - RULE-SET,primevideo,PROXY
+  - RULE-SET,reddit,PROXY
+  - RULE-SET,twitter,PROXY
+  - RULE-SET,telegram,PROXY
+  - DOMAIN-SUFFIX,local,DIRECT
+  - IP-CIDR,0.0.0.0/8,DIRECT,no-resolve
+  - IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
+  - IP-CIDR,100.64.0.0/10,DIRECT,no-resolve
+  - IP-CIDR,127.0.0.0/8,DIRECT,no-resolve
+  - IP-CIDR,169.254.0.0/16,DIRECT,no-resolve
+  - IP-CIDR,172.16.0.0/12,DIRECT,no-resolve
+  - IP-CIDR,192.168.0.0/16,DIRECT,no-resolve
+  - IP-CIDR,224.0.0.0/4,DIRECT,no-resolve
+  - IP-CIDR6,::1/128,DIRECT,no-resolve
+  - IP-CIDR6,fc00::/7,DIRECT,no-resolve
+  - IP-CIDR6,fe80::/10,DIRECT,no-resolve
+  - RULE-SET,private,DIRECT
+  - RULE-SET,cn,DIRECT
+  - RULE-SET,baidu,DIRECT
+  - RULE-SET,tencent,DIRECT
+  - RULE-SET,alibaba,DIRECT
+  - RULE-SET,jd,DIRECT
+  - RULE-SET,feishu,DIRECT
+  - RULE-SET,dingtalk,DIRECT
+  - RULE-SET,gitee,DIRECT
+  - RULE-SET,apple-cn,DIRECT
+  - RULE-SET,microsoft-cn,DIRECT
+  - DOMAIN-SUFFIX,gitcode.com,DIRECT
+  - GEOIP,CN,DIRECT,no-resolve
+  - MATCH,PROXY

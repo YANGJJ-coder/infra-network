@@ -1,0 +1,11 @@
+services:
+  caddy:
+    image: ${CADDY_IMAGE:?CADDY_IMAGE must be defined in .env}
+    container_name: bwg-subscription-proxy
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - /opt/docker/configs/reverse-proxy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - /opt/docker/configs/reverse-proxy/static/configs:/srv/configs:ro
+      - /opt/docker/data/reverse-proxy:/data
+      - /opt/docker/logs/reverse-proxy:/var/log/caddy

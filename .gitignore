@@ -1,0 +1,30 @@
+# Secrets and runtime data
+.env
+.env.*
+!.env.example
+*.db
+*.sqlite
+*.sqlite3
+*.pem
+*.key
+*.crt
+*.cer
+id_rsa
+id_ed25519
+secrets/
+backups/
+logs/
+runtime/
+tmp/
+
+# Generated files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.log
+
+# Local tooling
+.DS_Store
+.idea/
+.vscode/
+.worktrees/

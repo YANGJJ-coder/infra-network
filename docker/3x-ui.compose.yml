@@ -1,0 +1,22 @@
+services:
+  3x-ui:
+    image: ghcr.io/mhsanaei/3x-ui:v3.5.0@sha256:c56f5229687c4f7d1db01222bb5e14fd06d54d80076b2a179fa9c83322b13bbe
+    container_name: 3x-ui
+    restart: unless-stopped
+    tty: true
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      XUI_DB_FOLDER: /etc/x-ui
+      XUI_LOG_LEVEL: info
+      XUI_ENABLE_FAIL2BAN: "true"
+      XUI_TUNNEL_HEALTH_MONITOR: "false"
+    ports:
+      - "127.0.0.1:${PANEL_PORT}:2053"
+      - "127.0.0.1:2096:2096"
+      - "${VLESS_PORT}:${VLESS_PORT}/tcp"
+    volumes:
+      - /opt/docker/data/3x-ui:/etc/x-ui
+      - /opt/docker/configs/3x-ui:/root/cert
+      - /opt/docker/logs/3x-ui:/var/log/x-ui

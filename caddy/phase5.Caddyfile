@@ -1,0 +1,26 @@
+sub.jijunyang.com {
+    log {
+        output file /var/log/caddy/access.log
+        format json
+    }
+
+    @subscription path /sub/*
+    log_skip @subscription
+
+    @configs path /configs/*
+    log_skip @configs
+
+    handle @subscription {
+        reverse_proxy http://127.0.0.1:2096
+    }
+
+    handle_path /configs/* {
+        root * /srv/configs
+        header Content-Type "application/yaml; charset=utf-8"
+        file_server
+    }
+
+    handle {
+        respond "Not Found" 404
+    }
+}

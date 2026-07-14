@@ -1,0 +1,31 @@
+services:
+  caddy:
+    image: ${CADDY_IMAGE:?CADDY_IMAGE must be defined in .env}
+    container_name: bwg-subscription-proxy
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - /opt/docker/configs/reverse-proxy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - /opt/docker/data/reverse-proxy:/data
+      - /opt/docker/logs/reverse-proxy:/var/log/caddy
+
+  config-generator:
+    build:
+      context: /opt/docker/configs/config-generator
+      dockerfile: Dockerfile
+    image: bwg-config-generator:local
+    container_name: bwg-config-generator
+    restart: unless-stopped
+    network_mode: host
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - /opt/docker/configs/config-generator/nextin-runtime-template.yaml:/etc/bwg-config-generator/template.yaml:ro
+      - /opt/docker/configs/config-generator/ios-template.yaml:/etc/bwg-config-generator/ios-template.yaml:ro
+      - /opt/docker/data/3x-ui/x-ui.db:/var/lib/3x-ui/x-ui.db:ro
+    command:
+      - /etc/bwg-config-generator/template.yaml
+      - /var/lib/3x-ui/x-ui.db
