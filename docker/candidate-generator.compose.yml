@@ -1,0 +1,26 @@
+services:
+  candidate-generator:
+    build:
+      context: /opt/docker/configs/candidate-generator
+      dockerfile: Dockerfile
+    image: bwg-candidate-generator:local
+    container_name: bwg-candidate-generator
+    restart: unless-stopped
+    network_mode: host
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - /opt/docker/configs/candidate-generator/nextin-runtime-template.yaml:/etc/bwg-config-generator/template.yaml:ro
+      - /opt/docker/configs/candidate-generator/additional-proxies.yaml:/etc/bwg-config-generator/additional-proxies.yaml:ro
+      - /opt/docker/data/3x-ui/x-ui.db:/var/lib/3x-ui/x-ui.db:ro
+    command:
+      - /etc/bwg-config-generator/template.yaml
+      - /var/lib/3x-ui/x-ui.db
+      - --port
+      - "3012"
+      - --additional-proxies
+      - /etc/bwg-config-generator/additional-proxies.yaml
+      - --candidate-groups

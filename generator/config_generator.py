@@ -2,6 +2,7 @@
 """Build deterministic complete Mihomo configurations from 3X-UI nodes."""
 
 import copy
+import argparse
 import hashlib
 import json
 import re
@@ -63,6 +64,25 @@ def load_yaml(path: str) -> dict:
     return document
 
 
+def load_additional_proxies(path: str) -> list[dict]:
+    """Load candidate-only proxies from a root-readable runtime YAML file."""
+    return extract_proxies(load_yaml(path))
+
+
+def merge_proxies(*proxy_sets: list[dict]) -> list[dict]:
+    """Merge proxy lists and retain the existing duplicate-name contract."""
+    return extract_proxies({"proxies": [proxy for proxy_set in proxy_sets for proxy in proxy_set]})
+
+
+def normalize_candidate_us_proxies(proxies: list[dict]) -> list[dict]:
+    """Give the single existing US 3X-UI source its Candidate-facing name."""
+    if len(proxies) != 1:
+        raise ValueError("candidate configuration requires exactly one US 3X-UI proxy")
+    normalized = copy.deepcopy(proxies)
+    normalized[0]["name"] = "HS-US-01-Bandwagon"
+    return normalized
+
+
 def fetch_source_config(url: str, timeout_seconds: int) -> dict:
     import yaml
 
@@ -83,10 +103,21 @@ def render_yaml(config: dict) -> bytes:
     return yaml.safe_dump(config, allow_unicode=True, sort_keys=False).encode("utf-8")
 
 
-def generate_document(template_path: str, db_path: str, timeout_seconds: int = 10) -> bytes:
+def generate_document(
+    template_path: str,
+    db_path: str,
+    timeout_seconds: int = 10,
+    additional_proxies_path: str | None = None,
+    candidate_groups: bool = False,
+) -> bytes:
     sub_id = read_single_sub_id(db_path)
     source = fetch_source_config(f"http://127.0.0.1:2096/clash/{sub_id}", timeout_seconds)
-    config = build_config(load_yaml(template_path), extract_proxies(source), datetime.now(timezone.utc))
+    proxies = extract_proxies(source)
+    if candidate_groups:
+        proxies = normalize_candidate_us_proxies(proxies)
+    if additional_proxies_path:
+        proxies = merge_proxies(proxies, load_additional_proxies(additional_proxies_path))
+    config = build_config(load_yaml(template_path), proxies, datetime.now(timezone.utc), candidate_groups)
     return render_yaml(config)
 
 
@@ -94,6 +125,8 @@ class GeneratorHandler(BaseHTTPRequestHandler):
     template_path = ""
     db_path = ""
     ios_template_path = "/etc/bwg-config-generator/ios-template.yaml"
+    additional_proxies_path: str | None = None
+    candidate_groups = False
 
     def do_GET(self) -> None:
         if self.path.startswith("/templates/"):
@@ -107,7 +140,12 @@ class GeneratorHandler(BaseHTTPRequestHandler):
             self.send_error(HTTPStatus.NOT_FOUND)
             return
         try:
-            document = generate_document(self.template_path, self.db_path)
+            document = generate_document(
+                self.template_path,
+                self.db_path,
+                additional_proxies_path=self.additional_proxies_path,
+                candidate_groups=self.candidate_groups,
+            )
         except Exception as error:
             print(f"generation failed: {type(error).__name__}", file=sys.stderr, flush=True)
             self.send_error(HTTPStatus.SERVICE_UNAVAILABLE, type(error).__name__)
@@ -162,9 +200,17 @@ class GeneratorHandler(BaseHTTPRequestHandler):
         return
 
 
-def serve(template_path: str, db_path: str, port: int = 3011) -> None:
+def serve(
+    template_path: str,
+    db_path: str,
+    port: int = 3011,
+    additional_proxies_path: str | None = None,
+    candidate_groups: bool = False,
+) -> None:
     GeneratorHandler.template_path = template_path
     GeneratorHandler.db_path = db_path
+    GeneratorHandler.additional_proxies_path = additional_proxies_path
+    GeneratorHandler.candidate_groups = candidate_groups
     ThreadingHTTPServer(("127.0.0.1", port), GeneratorHandler).serve_forever()
 
 
@@ -187,7 +233,39 @@ def validate_config(config: dict) -> None:
             raise ValueError(f"{rule} must precede MATCH,PROXY")
 
 
-def build_config(template: dict, proxies: list[dict], generated_at: datetime) -> dict:
+def candidate_proxy_groups() -> list[dict]:
+    return [
+        {"name": "PROXY", "type": "select", "proxies": ["🚀 Auto", "🇺🇸 US", "🇸🇬 SG", "DIRECT"]},
+        {
+            "name": "🚀 Auto",
+            "type": "url-test",
+            "include-all-proxies": True,
+            "url": "https://www.gstatic.com/generate_204",
+            "interval": 300,
+            "tolerance": 80,
+        },
+        {
+            "name": "🇺🇸 US",
+            "type": "url-test",
+            "include-all-proxies": True,
+            "filter": "^HS-US-",
+            "url": "https://www.gstatic.com/generate_204",
+            "interval": 300,
+            "tolerance": 80,
+        },
+        {
+            "name": "🇸🇬 SG",
+            "type": "url-test",
+            "include-all-proxies": True,
+            "filter": "^HS-SG-",
+            "url": "https://www.gstatic.com/generate_204",
+            "interval": 300,
+            "tolerance": 80,
+        },
+    ]
+
+
+def build_config(template: dict, proxies: list[dict], generated_at: datetime, candidate_groups: bool = False) -> dict:
     config = copy.deepcopy(template)
     sorted_proxies = sorted(copy.deepcopy(proxies), key=lambda item: item["name"])
     for provider_name, provider in config.get("rule-providers", {}).items():
@@ -195,6 +273,8 @@ def build_config(template: dict, proxies: list[dict], generated_at: datetime) ->
             provider["url"] = f"{PUBLIC_RULES_BASE_URL}/{provider_name}.yaml"
             provider.pop("proxy", None)
     config["proxies"] = sorted_proxies
+    if candidate_groups:
+        config["proxy-groups"] = candidate_proxy_groups()
     config["x-config-version"] = 1
     config["x-generated-at"] = generated_at.strftime("%Y-%m-%dT%H:%M:%SZ")
     config["x-generator"] = "ConfigGenerator"
@@ -205,6 +285,17 @@ def build_config(template: dict, proxies: list[dict], generated_at: datetime) ->
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        raise SystemExit("usage: config_generator.py TEMPLATE_PATH XUI_DB_PATH")
-    serve(sys.argv[1], sys.argv[2])
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("template_path")
+    parser.add_argument("db_path")
+    parser.add_argument("--port", type=int, default=3011)
+    parser.add_argument("--additional-proxies")
+    parser.add_argument("--candidate-groups", action="store_true")
+    arguments = parser.parse_args()
+    serve(
+        arguments.template_path,
+        arguments.db_path,
+        arguments.port,
+        arguments.additional_proxies,
+        arguments.candidate_groups,
+    )

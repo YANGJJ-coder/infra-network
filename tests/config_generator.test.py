@@ -7,7 +7,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
-from generator.config_generator import build_config, extract_proxies, fetch_source_config, read_single_sub_id, validate_config
+from generator.config_generator import (
+    build_config,
+    extract_proxies,
+    fetch_source_config,
+    load_additional_proxies,
+    merge_proxies,
+    normalize_candidate_us_proxies,
+    read_single_sub_id,
+    validate_config,
+)
 
 
 FIXED_TIME = datetime(2026, 7, 14, 13, 52, 18, tzinfo=timezone.utc)
@@ -49,6 +58,37 @@ class ConfigGeneratorTests(unittest.TestCase):
         servers = {item["name"]: item["server"] for item in config["proxies"]}
         self.assertEqual("sub.jijunyang.com", servers["node-a"])
         self.assertEqual("jp.example", servers["external"])
+
+    def test_candidate_config_merges_runtime_sg_proxy_and_exposes_only_candidate_groups(self):
+        sg_proxy = {**PROXY, "name": "HS-SG-01-Akile", "server": "sg.jijunyang.com"}
+
+        config = build_config(
+            TEMPLATE,
+            merge_proxies([{**PROXY, "name": "HS-US-01-Bandwagon"}], [sg_proxy]),
+            FIXED_TIME,
+            candidate_groups=True,
+        )
+
+        self.assertEqual(["HS-SG-01-Akile", "HS-US-01-Bandwagon"], [item["name"] for item in config["proxies"]])
+        groups = {group["name"]: group for group in config["proxy-groups"]}
+        self.assertEqual({"PROXY", "🚀 Auto", "🇺🇸 US", "🇸🇬 SG"}, set(groups))
+        self.assertEqual(["🚀 Auto", "🇺🇸 US", "🇸🇬 SG", "DIRECT"], groups["PROXY"]["proxies"])
+        self.assertEqual("^HS-US-", groups["🇺🇸 US"]["filter"])
+        self.assertEqual("^HS-SG-", groups["🇸🇬 SG"]["filter"])
+
+    def test_candidate_normalizes_the_single_us_3x_ui_proxy_to_its_homestream_name(self):
+        normalized = normalize_candidate_us_proxies([{**PROXY, "name": "VLESS-TCP-Main-yjj-main"}])
+
+        self.assertEqual("HS-US-01-Bandwagon", normalized[0]["name"])
+
+    def test_runtime_additional_proxies_requires_a_named_yaml_proxy_list(self):
+        with tempfile.TemporaryDirectory() as directory:
+            additional = Path(directory) / "additional-proxies.yaml"
+            additional.write_text("proxies:\n  - name: HS-SG-01-Akile\n    type: vless\n", encoding="utf-8")
+
+            yaml_module = types.SimpleNamespace(safe_load=lambda _body: {"proxies": [{"name": "HS-SG-01-Akile", "type": "vless"}]})
+            with patch.dict(sys.modules, {"yaml": yaml_module}):
+                self.assertEqual("HS-SG-01-Akile", load_additional_proxies(str(additional))[0]["name"])
 
     def test_http_rule_providers_are_served_from_the_subscription_domain(self):
         template = {

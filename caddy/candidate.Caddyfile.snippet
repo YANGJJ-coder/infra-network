@@ -1,0 +1,7 @@
+# This exact-path handler is inserted before the existing /sub/* handler.
+# It is candidate-only and never changes the formal subscription route.
+@homestream_candidate path __CANDIDATE_PATH__
+log_skip @homestream_candidate
+handle_path __CANDIDATE_PATH__ {
+    reverse_proxy http://127.0.0.1:3012
+}
