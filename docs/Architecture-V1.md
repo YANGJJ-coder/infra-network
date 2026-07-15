@@ -1,28 +1,41 @@
-# BandwagonHost / infra-network 最终架构（V1.0）
+# Personal Network Infrastructure / HomeStream 最终架构（V1.0）
 
 ## 定位
 
-这是长期可维护、可复制、可恢复、可扩展的个人网络基础设施，不是单一代理服务。目标客户端包括 ChatGPT、OpenAI API、Claude、Gemini、GitHub、日常网络访问和流媒体设备；未来可接入 Reality、WireGuard、住宅 IP 与多 VPS。
+**Personal Network Infrastructure** 是长期可维护、可复制、可恢复、可扩展的个人网络基础设施，不是单一代理服务。其下的 **HomeStream** 是流媒体与智能分流系统。目标客户端包括 ChatGPT、OpenAI API、Claude、Gemini、GitHub、日常网络访问和流媒体设备；未来可接入 Reality、WireGuard、住宅 IP 与多 VPS。
+
+## 项目、系统与节点
+
+```text
+Personal Network Infrastructure
+└── HomeStream
+    └── HS-US-01-Bandwagon
+        └── bwg-usca6-01（BandwagonHost USCA_6 运维资产标识）
+```
+
+- `HS-US-01-Bandwagon` 是当前节点的规范业务名称；`bwg-usca6-01`、BandwagonHost 与 USCA_6 是保留的主机、服务商和套餐/资产事实，不替换、不重命名。
+- 节点命名格式为 `HS-<国家或地区>-<两位编号>-<服务商>`，例如 `HS-SG-01-Akile`、`HS-JP-01-Akile`、`HS-HK-01-XXX`、`HS-US-02-XXX`。
+- 新节点应在业务名称下登记其独立运维资产标识；示例：`HS-SG-01-Akile` 对应 `sglite4-2026071509465911b052`。
 
 ## 固定职责
 
 ```text
-3X-UI 节点数据
-    -> Config Generator
+HS-US-01-Bandwagon 节点数据（3X-UI）
+    -> HomeStream Config Generator
     -> 完整 Mihomo YAML
     -> https://sub.jijunyang.com/configs/<随机高熵 ID>.yaml
     -> Nextin / Mihomo / Stash / Shadowrocket / Apple TV
 ```
 
 - 3X-UI 仅负责 UUID、端口、Client、Inbound 与订阅节点数据。
-- Config Generator 是唯一客户端配置发布器：合并 3X-UI 节点与固定模板，输出 proxies、proxy-groups、rule-providers、rules、DNS、Fake-IP、版本和哈希。
+- HomeStream Config Generator 是唯一客户端配置发布器：合并 3X-UI 节点与固定模板，输出 proxies、proxy-groups、rule-providers、rules、DNS、Fake-IP、版本和哈希。
 - 3X-UI 不负责规则、DNS、Proxy Group、Fake-IP 或智能分流。
 - 每个客户端只维护一个高熵订阅 URL；后续增加 VPS、Reality、WireGuard、住宅 IP 或规则时，只更新服务端。
 
 ## 安全与版本控制
 
 - 禁止公开或提交 UUID、管理员密码、SQLite、SSH Key、Token、证书、备份、日志、`.env`、实际订阅 ID 或高熵订阅路径。
-- `infra-network` 是唯一基础设施仓库；不得与 `mes_web` 混放。
+- `infra-network` 是 Personal Network Infrastructure 的唯一基础设施仓库；不得与 `mes_web` 混放。
 - 所有变更必须使用 `FEATURE-YYYYMMDD-XX`、`BUG-YYYYMMDD-XX` 或 `ARCH-YYYYMMDD-XX` 编号，并记录原因、风险、回滚和验证。
 
 ## Dashboard

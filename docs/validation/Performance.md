@@ -1,7 +1,7 @@
 # Phase 4 性能基线
 
 采样时间：2026-07-14 11:44（Asia/Shanghai）
-采样位置：BandwagonHost VPS `bwg-usca6-01`，每个目标连续 3 次。该结果只代表 VPS 公网出口基线，不包含用户设备到 VLESS 入站的链路，不能替代客户端端到端验收。
+采样位置：`HS-US-01-Bandwagon`（BandwagonHost VPS `bwg-usca6-01`），每个目标连续 3 次。该结果只代表 VPS 公网出口基线，不包含用户设备到 VLESS 入站的链路，不能替代客户端端到端验收。
 
 | 目标 | HTTP 状态 | DNS 平均 | TCP 平均 | TLS 平均 | TTFB 平均 | TOTAL 平均 |
 |---|---:|---:|---:|---:|---:|---:|

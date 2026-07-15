@@ -2,6 +2,8 @@
 
 验收采用两层口径：`Function Acceptance` 使用 `PASS`，`Reliability Observation` 使用 `Pending`。Mac Studio（Nextin）已连接当前生产环境并完成基本通信链路的功能验收；长期稳定性观察独立记录，不作为功能失败。
 
+> 当前生产节点的规范业务名称为 `HS-US-01-Bandwagon`；历史验收证据中的 BandwagonHost、`bwg-usca6-01` 与实际运行数据均保留原样。
+
 | 类别 | 项目 | 当前状态 | 验收证据要求 |
 |---|---|---|---|
 | 服务器 | 3X-UI 容器运行 | 通过 | `docker ps` 显示 `Up` |

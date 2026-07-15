@@ -1,12 +1,14 @@
 # Phase 7.2：单一订阅 Config Generator
 
+> HomeStream 的订阅发布设计。当前节点使用规范业务名称 `HS-US-01-Bandwagon`；`bwg-usca6-01` / BandwagonHost USCA_6 仅作为保留的运维资产标识。
+
 ## 最终架构
 
 3X-UI 只保存和输出节点。客户端不再订阅 `/sub/<sub_id>`，也不再使用 Nextin `subscription-template`。
 
 ```text
 3X-UI Clash 节点 YAML（仅 VPS 回环）
-  -> Config Generator
+  -> HomeStream Config Generator
   -> https://sub.jijunyang.com/configs/<64-hex-random-id>.yaml
   -> Nextin / Mihomo / Stash
 ```

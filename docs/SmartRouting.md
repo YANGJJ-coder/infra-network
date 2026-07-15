@@ -1,8 +1,10 @@
 # Phase 7：Smart Routing（智能分流）
 
+> 本文定义 Personal Network Infrastructure 下 HomeStream 的智能分流设计；当前节点规范名称为 `HS-US-01-Bandwagon`，不改变其既有运维资产标识或运行配置。
+
 ## 交付边界
 
-Phase 7.2 起，Nextin/Mihomo/Stash 使用服务端 Config Generator 发布的完整 Rule Mode 配置。路由模板保存在仓库中，但客户端不再分别导入节点订阅与规则模板。
+Phase 7.2 起，Nextin/Mihomo/Stash 使用服务端 HomeStream Config Generator 发布的完整 Rule Mode 配置。路由模板保存在仓库中，但客户端不再分别导入节点订阅与规则模板。
 
 - [Nextin 配置](../templates/nextin-smart-routing.yaml)
 - [Mihomo 配置](../templates/mihomo-smart-routing.yaml)

@@ -1,5 +1,7 @@
 # Mac Studio（Nextin）生产验证
 
+> 当前生产节点的规范业务名称为 `HS-US-01-Bandwagon`；本报告中的 BandwagonHost 与 `bwg-usca6-01` 均为保留的历史运维资产标识。
+
 ## 结论
 
 **Function Acceptance：PASS**
@@ -16,7 +18,8 @@ Nextin
 ↓
 正式 HTTPS 订阅
 ↓
-BandwagonHost
+HS-US-01-Bandwagon
+（运维资产：BandwagonHost / `bwg-usca6-01`）
 ```
 
 因此，客户端基本通信链路已完成生产验证；剩余项目属于长期稳定性观察，不属于功能失败。

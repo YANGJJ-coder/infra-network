@@ -3,6 +3,8 @@
 报告时间：2026-07-14（Asia/Shanghai）
 结论：**Phase 4 的 Mac Studio（Nextin）Function Acceptance：PASS；Reliability Observation：Pending。**
 
+> 当前节点规范业务名称为 `HS-US-01-Bandwagon`。本报告保留原始运维资产标识 `bwg-usca6-01`、BandwagonHost 与历史运行结果，二者指向同一 BandwagonHost USCA_6 节点。
+
 ## 已验证的服务器状态
 
 | 域 | 结果 |
@@ -32,7 +34,8 @@ Nextin
 ↓
 正式 HTTPS 订阅
 ↓
-BandwagonHost
+HS-US-01-Bandwagon
+（运维资产：BandwagonHost / `bwg-usca6-01`）
 ```
 
 因此客户端基本通信链路已完成生产验证。YouTube/流媒体、DNS Leak、Sleep/Wake、Auto Launch、GitHub Clone 与 24 小时稳定性均归入 Reliability Observation，当前状态为 Pending，不属于功能失败。Mac 以外的 iPhone、iPad、Apple TV 验收仍按 [验收清单](validation/Acceptance.md) 记录。

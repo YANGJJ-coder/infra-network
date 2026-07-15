@@ -1,5 +1,7 @@
 # Phase 5：HTTPS 公网订阅
 
+> HomeStream 的历史部署阶段记录。本文中的服务器、端口、域名和服务商信息均为既有运行事实；当前节点规范名称为 `HS-US-01-Bandwagon`，其运维资产标识仍为 `bwg-usca6-01` / BandwagonHost USCA_6。
+
 ## 架构
 
 `sub.jijunyang.com` 的 A 记录为 `80.251.216.245`，Cloudflare 设为 DNS only。Caddy 只代理 `/sub/*` 到宿主机回环绑定的 3X-UI 面板端口；其它所有路径固定返回 `404`。3X-UI 面板继续仅经 SSH Tunnel 访问。
