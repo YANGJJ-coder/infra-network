@@ -25,7 +25,13 @@ services:
     volumes:
       - /opt/docker/configs/config-generator/nextin-runtime-template.yaml:/etc/bwg-config-generator/template.yaml:ro
       - /opt/docker/configs/config-generator/ios-template.yaml:/etc/bwg-config-generator/ios-template.yaml:ro
+      - /opt/docker/configs/config-generator/iphone-us-hk.yaml:/etc/bwg-config-generator/iphone-us-hk.yaml:ro
       - /opt/docker/data/3x-ui/x-ui.db:/var/lib/3x-ui/x-ui.db:ro
+      - /opt/docker/configs/config-generator/additional-proxies.yaml:/etc/bwg-config-generator/additional-proxies.yaml:ro
     command:
       - /etc/bwg-config-generator/template.yaml
       - /var/lib/3x-ui/x-ui.db
+      - --ios-slim-template
+      - /etc/bwg-config-generator/iphone-us-hk.yaml
+      - --additional-proxies
+      - /etc/bwg-config-generator/additional-proxies.yaml

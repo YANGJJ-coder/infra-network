@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
-from generator.config_generator import build_config, extract_proxies, fetch_source_config, read_single_sub_id, validate_config
+from generator.config_generator import build_config, build_ios_slim_config, extract_proxies, fetch_source_config, read_single_sub_id, validate_config
 
 
 FIXED_TIME = datetime(2026, 7, 14, 13, 52, 18, tzinfo=timezone.utc)
@@ -31,6 +31,29 @@ PROXY = {"name": "node-a", "type": "vless", "server": "example.test", "port": 44
 
 
 class ConfigGeneratorTests(unittest.TestCase):
+    def test_ios_slim_config_keeps_fake_ip_two_nodes_and_no_remote_rules(self):
+        template = {
+            "mode": "rule",
+            "dns": {"enable": True, "enhanced-mode": "fake-ip"},
+            "x-proxy-allowlist": ["HS-US-01-Bandwagon", "HS-HK-01-Lisa"],
+            "proxy-groups": [{"name": "PROXY", "type": "select", "proxies": ["HS-US-01-Bandwagon", "HS-HK-01-Lisa", "DIRECT"]}],
+            "rules": ["DOMAIN-SUFFIX,local,DIRECT", "MATCH,PROXY"],
+        }
+
+        config = build_ios_slim_config(
+            template,
+            [
+                {**PROXY, "name": "HS-US-01-Bandwagon"},
+                {**PROXY, "name": "HS-HK-01-Lisa"},
+            ],
+            FIXED_TIME,
+        )
+
+        self.assertEqual(["HS-HK-01-Lisa", "HS-US-01-Bandwagon"], [item["name"] for item in config["proxies"]])
+        self.assertEqual("fake-ip", config["dns"]["enhanced-mode"])
+        self.assertNotIn("rule-providers", config)
+        self.assertNotIn("AUTO", [group["name"] for group in config["proxy-groups"]])
+        self.assertNotIn("AI-US", [group["name"] for group in config["proxy-groups"]])
     def test_build_injects_sorted_nodes_and_required_metadata(self):
         config = build_config(TEMPLATE, [{**PROXY, "name": "node-z"}, PROXY], FIXED_TIME)
 

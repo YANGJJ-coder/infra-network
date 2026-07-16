@@ -12,10 +12,11 @@ SOURCE_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 ENV_FILE="$GENERATOR/runtime.env"
 
 [[ $(id -u) -eq 0 ]] || { echo 'Run as root.' >&2; exit 1; }
-for file in generator/config_generator.py generator/requirements.txt generator/Dockerfile templates/nextin-smart-routing.yaml templates/nextin-ios-template.yaml caddy/phase7.2.Caddyfile docker/phase7.2-reverse-proxy.compose.yml; do
+for file in generator/config_generator.py generator/requirements.txt generator/Dockerfile templates/nextin-smart-routing.yaml templates/nextin-ios-template.yaml templates/nextin-iphone-us-hk.yaml caddy/phase7.2.Caddyfile docker/phase7.2-reverse-proxy.compose.yml; do
   [[ -s "$SOURCE_DIR/$file" ]] || { echo "Missing deployment source: $file" >&2; exit 1; }
 done
 [[ -s /opt/docker/data/3x-ui/x-ui.db ]] || { echo 'Missing 3X-UI database.' >&2; exit 1; }
+[[ -s "$GENERATOR/additional-proxies.yaml" ]] || { echo 'Missing managed additional proxy source.' >&2; exit 1; }
 
 install -d -o root -g root -m 0750 "$STACK" "$CONFIG" "$GENERATOR" "$BACKUPS" "$DATA" "$LOG"
 if [[ ! -s "$ENV_FILE" ]]; then
@@ -24,6 +25,11 @@ if [[ ! -s "$ENV_FILE" ]]; then
 fi
 source "$ENV_FILE"
 [[ "$CONFIG_GENERATOR_PATH" =~ ^/configs/[0-9a-f]{64}\.yaml$ ]] || { echo 'Invalid config generator path.' >&2; exit 1; }
+if [[ -z "${IPHONE_SLIM_PATH:-}" ]]; then
+  IPHONE_SLIM_PATH="/iphone/$(openssl rand -hex 32).yaml"
+  printf 'IPHONE_SLIM_PATH=%s\n' "$IPHONE_SLIM_PATH" >> "$ENV_FILE"
+fi
+[[ "$IPHONE_SLIM_PATH" =~ ^/iphone/[0-9a-f]{64}\.yaml$ ]] || { echo 'Invalid iPhone slim path.' >&2; exit 1; }
 IOS_TEMPLATE_PATH="/templates/${CONFIG_GENERATOR_PATH#/configs/}"
 
 stamp=$(date -u +%Y%m%dT%H%M%SZ)
@@ -55,8 +61,9 @@ install -m 0644 -o root -g root "$SOURCE_DIR/generator/requirements.txt" "$GENER
 install -m 0644 -o root -g root "$SOURCE_DIR/generator/Dockerfile" "$GENERATOR/Dockerfile"
 install -m 0640 -o root -g root "$SOURCE_DIR/templates/nextin-smart-routing.yaml" "$GENERATOR/nextin-runtime-template.yaml"
 install -m 0640 -o root -g root "$SOURCE_DIR/templates/nextin-ios-template.yaml" "$GENERATOR/ios-template.yaml"
+install -m 0640 -o root -g root "$SOURCE_DIR/templates/nextin-iphone-us-hk.yaml" "$GENERATOR/iphone-us-hk.yaml"
 install -m 0640 -o root -g root "$SOURCE_DIR/docker/phase7.2-reverse-proxy.compose.yml" "$STACK/compose.yml"
-sed -e "s|__CONFIG_GENERATOR_PATH__|$CONFIG_GENERATOR_PATH|g" -e "s|__IOS_TEMPLATE_PATH__|$IOS_TEMPLATE_PATH|g" "$SOURCE_DIR/caddy/phase7.2.Caddyfile" | install -m 0640 -o root -g root /dev/stdin "$CONFIG/Caddyfile"
+sed -e "s|__CONFIG_GENERATOR_PATH__|$CONFIG_GENERATOR_PATH|g" -e "s|__IPHONE_SLIM_PATH__|$IPHONE_SLIM_PATH|g" -e "s|__IOS_TEMPLATE_PATH__|$IOS_TEMPLATE_PATH|g" "$SOURCE_DIR/caddy/phase7.2.Caddyfile" | install -m 0640 -o root -g root /dev/stdin "$CONFIG/Caddyfile"
 
 cat > "$backup/restore.sh" <<EOF
 #!/usr/bin/env bash
@@ -78,4 +85,4 @@ cd "$STACK"
 docker compose config >/dev/null
 docker compose up -d --build --force-recreate
 docker compose ps
-printf 'Generated subscription URL: https://%s%s\niPhone template URL: https://%s%s\nRollback: %s/restore.sh\n' "$DOMAIN" "$CONFIG_GENERATOR_PATH" "$DOMAIN" "$IOS_TEMPLATE_PATH" "$backup"
+printf 'Generated subscription URL: https://%s%s\niPhone slim URL: https://%s%s\niPhone template URL: https://%s%s\nRollback: %s/restore.sh\n' "$DOMAIN" "$CONFIG_GENERATOR_PATH" "$DOMAIN" "$IPHONE_SLIM_PATH" "$DOMAIN" "$IOS_TEMPLATE_PATH" "$backup"

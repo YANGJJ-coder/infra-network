@@ -18,6 +18,12 @@ sub.jijunyang.com {
         reverse_proxy http://127.0.0.1:3011
     }
 
+    @iphone_slim path __IPHONE_SLIM_PATH__
+    log_skip @iphone_slim
+    handle @iphone_slim {
+        reverse_proxy http://127.0.0.1:3011
+    }
+
     handle __IOS_TEMPLATE_PATH__ {
         reverse_proxy http://127.0.0.1:3011
     }

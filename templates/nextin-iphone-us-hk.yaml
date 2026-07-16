@@ -1,0 +1,71 @@
+# Nextin iPhone: US + HK minimal runtime profile. The generator injects current nodes.
+mode: rule
+log-level: warning
+ipv6: true
+
+profile:
+  store-selected: true
+  store-fake-ip: true
+
+dns:
+  enable: true
+  ipv6: true
+  use-hosts: true
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  default-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+    - 1.1.1.1
+  nameserver:
+    - https://dns.alidns.com/dns-query
+  fallback:
+    - https://doh-pure.onedns.net/dns-query
+    - https://ada.openbld.net/dns-query
+    - https://223.5.5.5/dns-query
+    - https://223.6.6.6/dns-query
+    - https://doh.dns.sb/dns-query
+    - https://dns.cloudflare.com/dns-query
+    - https://dns.twnic.tw/dns-query
+    - tls://8.8.4.4:853
+  fallback-filter:
+    geoip: true
+    ipcidr:
+      - 240.0.0.0/4
+      - 0.0.0.0/32
+  fake-ip-filter:
+    - '*.lan'
+    - '*.local'
+    - '+.stun.*.*'
+    - '+.stun.*.*.*'
+    - 'time.*.com'
+    - '+.pool.ntp.org'
+    - '+.msftconnecttest.com'
+    - '+.msftncsi.com'
+
+x-proxy-allowlist:
+  - HS-US-01-Bandwagon
+  - HS-HK-01-Lisa
+
+proxy-groups:
+  - name: PROXY
+    type: select
+    proxies:
+      - HS-US-01-Bandwagon
+      - HS-HK-01-Lisa
+      - DIRECT
+
+rules:
+  - DOMAIN-SUFFIX,local,DIRECT
+  - IP-CIDR,0.0.0.0/8,DIRECT,no-resolve
+  - IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
+  - IP-CIDR,100.64.0.0/10,DIRECT,no-resolve
+  - IP-CIDR,127.0.0.0/8,DIRECT,no-resolve
+  - IP-CIDR,169.254.0.0/16,DIRECT,no-resolve
+  - IP-CIDR,172.16.0.0/12,DIRECT,no-resolve
+  - IP-CIDR,192.168.0.0/16,DIRECT,no-resolve
+  - IP-CIDR,224.0.0.0/4,DIRECT,no-resolve
+  - IP-CIDR6,::1/128,DIRECT,no-resolve
+  - IP-CIDR6,fc00::/7,DIRECT,no-resolve
+  - IP-CIDR6,fe80::/10,DIRECT,no-resolve
+  - MATCH,PROXY
