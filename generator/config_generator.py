@@ -14,6 +14,8 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from custom_rules.validation import render_rule, validate_rule
+
 
 REQUIRED_RULES = (
     "RULE-SET,openai,AI-US",
@@ -25,6 +27,7 @@ REQUIRED_RULES = (
     "RULE-SET,baidu,DIRECT",
     "MATCH,PROXY",
 )
+AI_US_RULES = REQUIRED_RULES[:5]
 
 PUBLIC_RULES_BASE_URL = "https://sub.jijunyang.com/rules"
 RULE_FILE_PATTERN = re.compile(r"^/rules/([a-z0-9-]+)\.yaml$")
@@ -44,6 +47,19 @@ def read_single_sub_id(db_path: str) -> str:
     if len(rows) != 1:
         raise ValueError("expected exactly one enabled subscription client")
     return rows[0][0]
+
+
+def read_enabled_custom_rules(db_path: str | None) -> list[dict]:
+    if not db_path:
+        return []
+    database_uri = Path(db_path).resolve().as_uri() + "?mode=ro"
+    with sqlite3.connect(database_uri, uri=True) as connection:
+        connection.row_factory = sqlite3.Row
+        rows = connection.execute(
+            """select id, rule_type, content, policy
+            from custom_rules where enabled=1 order by sort_order asc, id asc"""
+        ).fetchall()
+    return [dict(row) for row in rows]
 
 
 def extract_proxies(source_config: dict) -> list[dict]:
@@ -103,13 +119,19 @@ def generate_document(
     db_path: str,
     timeout_seconds: int = 10,
     additional_proxies_path: str | None = None,
+    custom_rules_db_path: str | None = None,
 ) -> bytes:
     sub_id = read_single_sub_id(db_path)
     source = fetch_source_config(f"http://127.0.0.1:2096/clash/{sub_id}", timeout_seconds)
     proxies = extract_proxies(source)
     if additional_proxies_path:
         proxies = merge_proxies(proxies, load_additional_proxies(additional_proxies_path))
-    config = build_config(load_yaml(template_path), proxies, datetime.now(timezone.utc))
+    config = build_config(
+        load_yaml(template_path),
+        proxies,
+        datetime.now(timezone.utc),
+        custom_rules=read_enabled_custom_rules(custom_rules_db_path),
+    )
     return render_yaml(config)
 
 
@@ -175,6 +197,7 @@ class GeneratorHandler(BaseHTTPRequestHandler):
     ios_template_path = "/etc/bwg-config-generator/ios-template.yaml"
     ios_slim_template_path = "/etc/bwg-config-generator/iphone-us-hk.yaml"
     additional_proxies_path: str | None = None
+    custom_rules_db_path: str | None = None
 
     def do_GET(self) -> None:
         if self.path.startswith("/iphone/"):
@@ -195,6 +218,7 @@ class GeneratorHandler(BaseHTTPRequestHandler):
                 self.template_path,
                 self.db_path,
                 additional_proxies_path=self.additional_proxies_path,
+                custom_rules_db_path=self.custom_rules_db_path,
             )
         except Exception as error:
             print(f"generation failed: {type(error).__name__}", file=sys.stderr, flush=True)
@@ -274,10 +298,12 @@ def serve(
     port: int = 3011,
     additional_proxies_path: str | None = None,
     ios_slim_template_path: str | None = None,
+    custom_rules_db_path: str | None = None,
 ) -> None:
     GeneratorHandler.template_path = template_path
     GeneratorHandler.db_path = db_path
     GeneratorHandler.additional_proxies_path = additional_proxies_path
+    GeneratorHandler.custom_rules_db_path = custom_rules_db_path
     if ios_slim_template_path:
         GeneratorHandler.ios_slim_template_path = ios_slim_template_path
     ThreadingHTTPServer(("127.0.0.1", port), GeneratorHandler).serve_forever()
@@ -302,8 +328,38 @@ def validate_config(config: dict) -> None:
             raise ValueError(f"{rule} must precede MATCH,PROXY")
 
 
-def build_config(template: dict, proxies: list[dict], generated_at: datetime) -> dict:
+def normalize_custom_rules(custom_rules: list[dict]) -> list[dict]:
+    normalized = []
+    for item in custom_rules:
+        rule = validate_rule(item["rule_type"], item["content"], item["policy"])
+        normalized.append(
+            {
+                "id": item.get("id"),
+                "rule_type": rule.rule_type,
+                "content": rule.content,
+                "policy": rule.policy,
+                "rendered_rule": render_rule(rule),
+            }
+        )
+    return normalized
+
+
+def order_rules(base_rules: list[str], custom_rules: list[dict]) -> list[str]:
+    ai_rules = [rule for rule in base_rules if rule in AI_US_RULES]
+    if ai_rules != list(AI_US_RULES):
+        raise ValueError("generated configuration is missing the complete AI-US routing contract")
+    remaining_rules = [rule for rule in base_rules if rule not in AI_US_RULES]
+    return [item["rendered_rule"] for item in custom_rules] + ai_rules + remaining_rules
+
+
+def build_config(
+    template: dict,
+    proxies: list[dict],
+    generated_at: datetime,
+    custom_rules: list[dict] | None = None,
+) -> dict:
     config = copy.deepcopy(template)
+    normalized_custom_rules = normalize_custom_rules(custom_rules or [])
     sorted_proxies = sorted(copy.deepcopy(proxies), key=lambda item: item["name"])
     for provider_name, provider in config.get("rule-providers", {}).items():
         if provider.get("type") == "http" and provider.get("url"):
@@ -315,6 +371,9 @@ def build_config(template: dict, proxies: list[dict], generated_at: datetime) ->
     config["x-generator"] = "ConfigGenerator"
     config["x-template-sha256"] = canonical_sha256(template)
     config["x-proxies-sha256"] = canonical_sha256(sorted_proxies)
+    config["x-custom-rules-count"] = len(normalized_custom_rules)
+    config["x-custom-rules-sha256"] = canonical_sha256(normalized_custom_rules)
+    config["rules"] = order_rules(config.get("rules", []), normalized_custom_rules)
     validate_config(config)
     return config
 
@@ -326,6 +385,7 @@ if __name__ == "__main__":
     parser.add_argument("--port", type=int, default=3011)
     parser.add_argument("--additional-proxies")
     parser.add_argument("--ios-slim-template")
+    parser.add_argument("--custom-rules-db")
     arguments = parser.parse_args()
     serve(
         arguments.template_path,
@@ -333,4 +393,5 @@ if __name__ == "__main__":
         arguments.port,
         arguments.additional_proxies,
         arguments.ios_slim_template,
+        arguments.custom_rules_db,
     )

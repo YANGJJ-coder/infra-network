@@ -6,6 +6,7 @@ services:
     network_mode: host
     volumes:
       - /opt/docker/configs/reverse-proxy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - /opt/docker/configs/custom-rules/custom-rules-auth.caddy:/etc/caddy/custom-rules-auth.caddy:ro
       - /opt/docker/data/reverse-proxy:/data
       - /opt/docker/logs/reverse-proxy:/var/log/caddy
 
@@ -28,6 +29,7 @@ services:
       - /opt/docker/configs/config-generator/iphone-us-hk.yaml:/etc/bwg-config-generator/iphone-us-hk.yaml:ro
       - /opt/docker/data/3x-ui/x-ui.db:/var/lib/3x-ui/x-ui.db:ro
       - /opt/docker/configs/config-generator/additional-proxies.yaml:/etc/bwg-config-generator/additional-proxies.yaml:ro
+      - /opt/docker/data/custom-rules:/var/lib/custom-rules:ro
     command:
       - /etc/bwg-config-generator/template.yaml
       - /var/lib/3x-ui/x-ui.db
@@ -35,3 +37,25 @@ services:
       - /etc/bwg-config-generator/iphone-us-hk.yaml
       - --additional-proxies
       - /etc/bwg-config-generator/additional-proxies.yaml
+      - --custom-rules-db
+      - /var/lib/custom-rules/custom-rules.db
+
+  custom-rules:
+    build:
+      context: /opt/docker/configs/custom-rules
+      dockerfile: Dockerfile
+    image: bwg-custom-rules:local
+    container_name: bwg-custom-rules
+    restart: unless-stopped
+    network_mode: host
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - /opt/docker/data/custom-rules:/var/lib/custom-rules
+    command:
+      - /var/lib/custom-rules/custom-rules.db

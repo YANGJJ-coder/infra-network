@@ -3,11 +3,13 @@ import sqlite3
 import sys
 import tempfile
 import types
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
-from generator.config_generator import build_config, build_ios_slim_config, extract_proxies, fetch_source_config, read_single_sub_id, validate_config
+from custom_rules.store import CustomRuleStore
+from generator.config_generator import build_config, build_ios_slim_config, extract_proxies, fetch_source_config, generate_document, read_single_sub_id, validate_config
 
 
 FIXED_TIME = datetime(2026, 7, 14, 13, 52, 18, tzinfo=timezone.utc)
@@ -128,6 +130,77 @@ class ConfigGeneratorTests(unittest.TestCase):
         }
 
         validate_config(formal_ai_us)
+
+    def test_custom_rules_precede_ai_us_and_preserve_remaining_rule_order(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = CustomRuleStore(str(Path(directory) / "custom-rules.db"))
+            store.create("DOMAIN-SUFFIX", "chatgpt.com", "DIRECT", True, "override AI")
+            store.create("DOMAIN", "off.example", "REJECT", False, "disabled")
+            template = {
+                **TEMPLATE,
+                "rules": [
+                    "RULE-SET,ads,REJECT",
+                    "RULE-SET,openai,AI-US",
+                    "RULE-SET,claude,AI-US",
+                    "RULE-SET,anthropic,AI-US",
+                    "RULE-SET,gemini,AI-US",
+                    "RULE-SET,perplexity,AI-US",
+                    "RULE-SET,netflix,PROXY",
+                    "RULE-SET,baidu,DIRECT",
+                    "MATCH,PROXY",
+                ],
+            }
+
+            config = build_config(template, [PROXY], FIXED_TIME, custom_rules=store.list_enabled())
+
+        self.assertEqual(
+            [
+                "DOMAIN-SUFFIX,chatgpt.com,DIRECT",
+                "RULE-SET,openai,AI-US",
+                "RULE-SET,claude,AI-US",
+                "RULE-SET,anthropic,AI-US",
+                "RULE-SET,gemini,AI-US",
+                "RULE-SET,perplexity,AI-US",
+                "RULE-SET,ads,REJECT",
+                "RULE-SET,netflix,PROXY",
+                "RULE-SET,baidu,DIRECT",
+                "MATCH,PROXY",
+            ],
+            config["rules"],
+        )
+        self.assertEqual(1, config["x-custom-rules-count"])
+        self.assertRegex(config["x-custom-rules-sha256"], r"^[0-9a-f]{64}$")
+
+    def test_formal_generation_reads_only_enabled_custom_rules_from_database(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory_path = Path(directory)
+            source_database = directory_path / "x-ui.db"
+            with sqlite3.connect(source_database) as connection:
+                connection.execute("create table clients (enable integer, sub_id text)")
+                connection.execute("insert into clients values (1, 'formal-client')")
+            store = CustomRuleStore(str(directory_path / "custom-rules.db"))
+            store.create("DOMAIN", "first.example", "DIRECT", True, "enabled")
+            store.create("DOMAIN", "off.example", "REJECT", False, "disabled")
+            template_path = directory_path / "template.yaml"
+            template_path.write_text(json.dumps(TEMPLATE), encoding="utf-8")
+            yaml_module = types.SimpleNamespace(
+                safe_load=lambda source: json.loads(source.read() if hasattr(source, "read") else source),
+                safe_dump=lambda value, **_kwargs: json.dumps(value),
+            )
+
+            with patch.dict(sys.modules, {"yaml": yaml_module}), patch(
+                "generator.config_generator.fetch_source_config", return_value={"proxies": [PROXY]}
+            ):
+                document = generate_document(
+                    str(template_path),
+                    str(source_database),
+                    custom_rules_db_path=str(directory_path / "custom-rules.db"),
+                )
+
+        config = json.loads(document)
+        self.assertEqual("DOMAIN,first.example,DIRECT", config["rules"][0])
+        self.assertNotIn("DOMAIN,off.example,REJECT", config["rules"])
+        self.assertEqual(1, config["x-custom-rules-count"])
 
     def test_read_single_sub_id_uses_only_enabled_client(self):
         with tempfile.TemporaryDirectory() as directory:

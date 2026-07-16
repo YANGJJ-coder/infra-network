@@ -45,6 +45,18 @@ sub.jijunyang.com {
 status.jijunyang.com {
     encode zstd gzip
 
+    @custom_rules_root path /manage-status-page/custom-rules
+    redir @custom_rules_root /manage-status-page/custom-rules/ 308
+
+    handle_path /manage-status-page/custom-rules/* {
+        import /etc/caddy/custom-rules-auth.caddy
+        reverse_proxy http://127.0.0.1:3012 {
+            transport http {
+                read_timeout 30s
+            }
+        }
+    }
+
     @server_summary path /api/server-summary
     handle @server_summary {
         header Cache-Control "public, max-age=60"

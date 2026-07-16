@@ -4,6 +4,7 @@ WORKDIR /app
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY config_generator.py ./
+COPY custom_rules ./custom_rules
 
 EXPOSE 3011
 ENTRYPOINT ["python", "/app/config_generator.py"]
