@@ -15,7 +15,11 @@ from pathlib import Path
 
 
 REQUIRED_RULES = (
-    "RULE-SET,openai,PROXY",
+    "RULE-SET,openai,AI-US",
+    "RULE-SET,claude,AI-US",
+    "RULE-SET,anthropic,AI-US",
+    "RULE-SET,gemini,AI-US",
+    "RULE-SET,perplexity,AI-US",
     "RULE-SET,netflix,PROXY",
     "RULE-SET,baidu,DIRECT",
     "MATCH,PROXY",

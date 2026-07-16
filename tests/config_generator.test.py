@@ -16,7 +16,16 @@ TEMPLATE = {
     "dns": {"enable": True, "enhanced-mode": "fake-ip"},
     "proxy-groups": [{"name": "PROXY", "type": "select", "include-all-proxies": True}],
     "rule-providers": {"openai": {"type": "http"}, "baidu": {"type": "http"}, "netflix": {"type": "http"}},
-    "rules": ["RULE-SET,openai,PROXY", "RULE-SET,netflix,PROXY", "RULE-SET,baidu,DIRECT", "MATCH,PROXY"],
+    "rules": [
+        "RULE-SET,openai,AI-US",
+        "RULE-SET,claude,AI-US",
+        "RULE-SET,anthropic,AI-US",
+        "RULE-SET,gemini,AI-US",
+        "RULE-SET,perplexity,AI-US",
+        "RULE-SET,netflix,PROXY",
+        "RULE-SET,baidu,DIRECT",
+        "MATCH,PROXY",
+    ],
 }
 PROXY = {"name": "node-a", "type": "vless", "server": "example.test", "port": 443}
 
@@ -76,8 +85,26 @@ class ConfigGeneratorTests(unittest.TestCase):
     def test_validation_rejects_missing_explicit_routing_contract(self):
         invalid = {**TEMPLATE, "proxies": [PROXY], "rules": ["MATCH,PROXY"]}
 
-        with self.assertRaisesRegex(ValueError, "RULE-SET,openai,PROXY"):
+        with self.assertRaisesRegex(ValueError, "RULE-SET,openai,AI-US"):
             validate_config(invalid)
+
+    def test_validation_accepts_the_formal_ai_us_routing_contract(self):
+        formal_ai_us = {
+            **TEMPLATE,
+            "proxies": [{**PROXY, "name": "HS-US-01-Bandwagon"}, {**PROXY, "name": "HS-HK-01-Lisa"}],
+            "rules": [
+                "RULE-SET,openai,AI-US",
+                "RULE-SET,claude,AI-US",
+                "RULE-SET,anthropic,AI-US",
+                "RULE-SET,gemini,AI-US",
+                "RULE-SET,perplexity,AI-US",
+                "RULE-SET,netflix,PROXY",
+                "RULE-SET,baidu,DIRECT",
+                "MATCH,PROXY",
+            ],
+        }
+
+        validate_config(formal_ai_us)
 
     def test_read_single_sub_id_uses_only_enabled_client(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -141,7 +168,37 @@ class ConfigGeneratorTests(unittest.TestCase):
         self.assertIn("https://dns.alidns.com/dns-query", template)
         self.assertIn("fallback-filter:", template)
         self.assertNotIn("proxy-server-nameserver:", template)
-        self.assertEqual(27, template.count("proxy: PROXY"))
+        self.assertEqual(29, template.count("proxy: PROXY"))
+
+    def test_formal_template_routes_only_named_ai_services_to_single_us_group(self):
+        template = (Path(__file__).parents[1] / "templates" / "nextin-smart-routing.yaml").read_text(encoding="utf-8")
+
+        self.assertIn("  - name: AI-US\n    type: select\n    proxies:\n      - HS-US-01-Bandwagon", template)
+        self.assertNotIn("HS-SG-01-Akile", template)
+        for rule in (
+            "RULE-SET,openai,AI-US",
+            "RULE-SET,claude,AI-US",
+            "RULE-SET,anthropic,AI-US",
+            "RULE-SET,gemini,AI-US",
+            "RULE-SET,perplexity,AI-US",
+        ):
+            self.assertIn(rule, template)
+        self.assertIn(
+            'gemini: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/gemini.yaml, url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Gemini/Gemini.yaml", proxy: PROXY}',
+            template,
+        )
+        self.assertIn(
+            'perplexity: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/perplexity.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/perplexity.yaml", proxy: PROXY}',
+            template,
+        )
+        for rule in (
+            "RULE-SET,youtube,PROXY",
+            "RULE-SET,netflix,PROXY",
+            "RULE-SET,disney,PROXY",
+            "RULE-SET,apple-tvplus,PROXY",
+            "RULE-SET,primevideo,PROXY",
+        ):
+            self.assertIn(rule, template)
 
 
 if __name__ == "__main__":
