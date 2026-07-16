@@ -50,6 +50,10 @@ proxy-groups:
     proxies:
       - AUTO
       - DIRECT
+  - name: AI-US
+    type: select
+    proxies:
+      - HS-US-01-Bandwagon
   - name: AUTO
     type: url-test
     include-all-proxies: true
@@ -73,6 +77,8 @@ rule-providers:
   openai: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/openai.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/openai.yaml", proxy: PROXY}
   claude: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/claude.yaml, url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Claude/Claude.yaml", proxy: PROXY}
   anthropic: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/anthropic.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/anthropic.yaml", proxy: PROXY}
+  gemini: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/gemini.yaml, url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Gemini/Gemini.yaml", proxy: PROXY}
+  perplexity: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/perplexity.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/perplexity.yaml", proxy: PROXY}
   google: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/google.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google.yaml", proxy: PROXY}
   github: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/github.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/github.yaml", proxy: PROXY}
   docker: {type: http, behavior: domain, format: yaml, interval: 86400, path: ./rules/docker.yaml, url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/docker.yaml", proxy: PROXY}
@@ -88,9 +94,11 @@ rule-providers:
 
 rules:
   - RULE-SET,ads,REJECT
-  - RULE-SET,openai,PROXY
-  - RULE-SET,claude,PROXY
-  - RULE-SET,anthropic,PROXY
+  - RULE-SET,openai,AI-US
+  - RULE-SET,claude,AI-US
+  - RULE-SET,anthropic,AI-US
+  - RULE-SET,gemini,AI-US
+  - RULE-SET,perplexity,AI-US
   - RULE-SET,google,PROXY
   - RULE-SET,github,PROXY
   - RULE-SET,docker,PROXY
