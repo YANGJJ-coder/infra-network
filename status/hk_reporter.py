@@ -7,6 +7,7 @@ import json
 import os
 import subprocess
 from datetime import datetime, timezone
+from pathlib import Path
 from urllib.request import Request, urlopen
 
 
@@ -25,20 +26,50 @@ def docker_state(name: str) -> str:
     return value or "unavailable"
 
 
+def update_traffic_total(state_path: Path, interface: str, rx: int, tx: int) -> int:
+    try:
+        previous = json.loads(state_path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        previous = {}
+    if previous.get("interface") == interface:
+        previous_rx = int(previous.get("rx", 0))
+        previous_tx = int(previous.get("tx", 0))
+        rx_delta = rx - previous_rx if rx >= previous_rx else rx
+        tx_delta = tx - previous_tx if tx >= previous_tx else tx
+        total = int(previous.get("total", 0)) + rx_delta + tx_delta
+    else:
+        total = rx + tx
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = state_path.with_name(f".{state_path.name}.tmp")
+    temporary.write_text(json.dumps({"interface": interface, "rx": rx, "tx": tx, "total": total}), encoding="utf-8")
+    os.chmod(temporary, 0o600)
+    os.replace(temporary, state_path)
+    return total
+
+
+def current_interface_counters() -> tuple[str, int, int]:
+    interface = command("sh", "-c", "ip -o -4 route show default | awk 'NR==1 {print $5}'")
+    if not interface:
+        raise RuntimeError("default network interface is unavailable")
+    for line in Path("/proc/net/dev").read_text(encoding="utf-8").splitlines():
+        if line.strip().startswith(f"{interface}:"):
+            fields = line.split(":", 1)[1].split()
+            return interface, int(fields[0]), int(fields[8])
+    raise RuntimeError(f"network counters are unavailable for {interface}")
+
+
 def collect_metrics() -> dict:
     load_1m, load_5m, load_15m, *_ = open("/proc/loadavg", encoding="utf-8").read().split()
     memory_line = next(line for line in command("free").splitlines() if line.startswith("Mem:"))
     _, total_memory, used_memory, *_ = memory_line.split()
     docker_names = command("docker", "ps", "--format", "{{.Names}}").splitlines()
     xui_name = next((name for name in docker_names if "3x-ui" in name), "")
-    traffic = {"vnstat_month_total": 0}
-    try:
-        vnstat = json.loads(command("vnstat", "--json", "m"))
-        interface = next((item for item in vnstat.get("interfaces", []) if item.get("name") == "eth0"), {})
-        month = (interface.get("traffic", {}).get("month") or [{}])[-1]
-        traffic["vnstat_month_total"] = int(month.get("rx", 0)) + int(month.get("tx", 0))
-    except (json.JSONDecodeError, KeyError, StopIteration, ValueError):
-        pass
+    interface, rx, tx = current_interface_counters()
+    traffic = {
+        "vnstat_month_total": update_traffic_total(
+            Path(os.environ.get("TRAFFIC_STATE_PATH", "/opt/homestream/status-reporter/traffic-state.json")), interface, rx, tx
+        )
+    }
     cpu_idle = command("sh", "-c", "LC_ALL=C top -bn1 | awk '/Cpu\\(s\\)/ {for (i=1;i<=NF;i++) if ($i ~ /^id/) {gsub(/,/, \".\", $(i-1)); print $(i-1); exit}}'")
     return {
         "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
