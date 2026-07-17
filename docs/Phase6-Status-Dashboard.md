@@ -6,6 +6,6 @@
 
 公开状态页只能查看状态；不提供写操作、重启、停止、更新、删除或自动修复。订阅 URL、订阅 ID、UUID、SSH 凭据和 3X-UI 管理信息不在页面、接口或日志中显示。
 
-`/api/server-summary` 返回 CPU、内存、磁盘、负载、运行时间、Docker、Caddy、3X-UI、订阅 HTTP 状态、证书、vnStat 月流量及最近备份时间。流量为本机接口统计，仅供参考，以 KiwiVM 计费为准。
+`/api/server-summary` 保持返回 US 的 CPU、内存、磁盘、负载、运行时间、Docker、Caddy、3X-UI、订阅 HTTP 状态、证书、vnStat 月流量及最近备份时间；同时新增 `nodes.us` 与 `nodes.hk`。HK 仅由 `HS-HK-01-Lisa` 每 600 秒向 US 主动发送已签名的最近状态；HK 没有对外指标端口。HK 状态超过 1,800 秒标记为 stale，缺失则标记为 unavailable。流量为本机接口统计，仅供参考，以各服务商计费为准。
 
 回滚脚本位于 `/opt/docker/backups/status/<UTC时间戳>/restore.sh`；常规备份命令为 `/opt/docker/scripts/status/backup.sh`。

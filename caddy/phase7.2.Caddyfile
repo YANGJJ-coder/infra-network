@@ -59,10 +59,19 @@ status.jijunyang.com {
 
     @server_summary path /api/server-summary
     handle @server_summary {
-        header Cache-Control "public, max-age=60"
+        header Cache-Control "no-store"
         reverse_proxy http://127.0.0.1:3010 {
             transport http {
                 read_timeout 5s
+            }
+        }
+    }
+
+    @hk_status_report path /api/node-reports/hk
+    handle @hk_status_report {
+        reverse_proxy http://127.0.0.1:3010 {
+            transport http {
+                read_timeout 15s
             }
         }
     }
