@@ -99,6 +99,13 @@ class StatusServerTests(unittest.TestCase):
         self.assertIn('/api/server-summary?refresh=', html)
         self.assertNotIn('/api/node-reports/hk', html)
 
+    def test_homepage_links_to_custom_rules_beside_admin_login(self):
+        html = homepage_html()
+        self.assertIn(
+            '<a href="/manage-status-page">管理员登录</a><a href="/manage-status-page/custom-rules/">管理规则</a>',
+            html,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
